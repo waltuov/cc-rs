@@ -1,8 +1,6 @@
 name: probe
 on:
-  push:
-    branches:
-    - probe/cuda-flag-check
+  pull_request:
 
 env:
   CARGO_INCREMENTAL: 0
