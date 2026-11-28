@@ -1,0 +1,42 @@
+name: probe
+on:
+  push:
+    branches:
+    - probe/cuda-flag-check
+
+env:
+  CARGO_INCREMENTAL: 0
+  CC_ENABLE_DEBUG_OUTPUT: true
+
+permissions: {}
+
+jobs:
+  cuda:
+    name: CUDA flag check probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install cuda-minimal-build-13-4
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        run: |
+          distro="ubuntu$(. /etc/os-release && echo "${VERSION_ID//./}")"
+          wget "https://developer.download.nvidia.com/compute/cuda/repos/${distro}/x86_64/cuda-keyring_1.1-1_all.deb"
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get -y install cuda-minimal-build-13-4
+          echo "/usr/local/cuda/bin" >> "$GITHUB_PATH"
+      - run: cargo update
+      - name: nvcc version
+        shell: bash
+        run: nvcc --version
+      - name: Build cc-test with g++
+        shell: bash
+        run: cargo build --manifest-path dev-tools/cc-test/Cargo.toml --features test_cuda
+      - name: Build cc-test with clang++
+        shell: bash
+        run: |
+          touch dev-tools/cc-test/build.rs
+          CXX=clang++ cargo build --manifest-path dev-tools/cc-test/Cargo.toml --features test_cuda

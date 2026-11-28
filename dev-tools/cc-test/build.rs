@@ -91,6 +91,32 @@ fn main() {
             }
             cuda.compile("libcuda.a");
 
+            // PROBE (fork CI only, not for publishing).
+            for flag in [
+                "-O3",
+                "-fPIC",
+                "-DPROBE=1",
+                "-Wall",
+                "-ffunction-sections",
+                "-funroll-loops",
+                "-no-such-flag-xyz",
+            ] {
+                println!("cargo:warning=PROBE BEGIN is_flag_supported({flag})");
+                let res = cuda.is_flag_supported(flag);
+                println!("cargo:warning=PROBE END is_flag_supported({flag}) = {res:?}");
+            }
+            let mut probe = cc::Build::new();
+            probe
+                .cuda(true)
+                .cudart("static")
+                .flag_if_supported("-O3")
+                .flag_if_supported("-funroll-loops")
+                .flag_if_supported("-no-such-flag-xyz");
+            println!(
+                "cargo:warning=PROBE compiler args with flag_if_supported = {:?}",
+                probe.get_compiler().args()
+            );
+
             // Communicate [cfg(feature = "cuda")] to test/all.rs.
             println!("cargo:rustc-cfg=feature=\"cuda\"");
         }
